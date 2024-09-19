@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "properties": {
+    "requirement": { "type": "string" },
+    "status": { "type": "string"},
+    "classesToComplete" : {
+      "type":"array",
+      "items":{"type":"string"}
+    },
+    "classesCompleted" : {
+      "type":"array",
+      "items":{"type":"string"}
+    },
+    "subrequirements" : {
+      "type": "array",
+      "items": { "$ref": "#" }
+    }
+  }
+}

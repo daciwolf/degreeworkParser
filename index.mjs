@@ -3,33 +3,60 @@ import fs from 'fs';
 
 
 
-const endpoint = process.env.AZURE_OPENAI_CHAT_ENDPOINT;
-const apiKey = process.env.AZURE_OPENAI_CHAT_API_KEY;
-const apiVersion = "2024-02-15-preview";
-const deployment = "zotsiteschat";
-
-console.log(process.env);
-
-const client = new AzureOpenAI({endpoint: endpoint, apiKey : apiKey, apiVersion: apiVersion, deployment : deployment})
+const endpoint = process.env.AZURE_ENDPOINT;
+const apiKey = process.env.AZURE_API_KEY;
+const apiVersion = "2024-05-01-preview";
 
 
-const assistant = client.beta.assistants.create({
+
+const client = new AzureOpenAI({endpoint: endpoint, apiKey : apiKey, apiVersion: apiVersion})
+
+
+const assistant = await client.beta.assistants.create({
     name: "degreeworksParser",
-    instructions: "You look at student transcipts and return a json where every requirement contains three attribues, a string varialbe that is the reqirement name, a variable called comeplete that can be 'complete', 'incomplete' or 'inprogress' as well as a subrequiremets key that can contain a nested requirements tab or a list of class names",
-    model: "gpt-4o",
+    instructions: `You look at student transcipts and return a json that follows the following schema:{
+  "type": "object",
+  "properties": {
+    "requirement": { "type": "string" },
+    "status": { "type": "string"},
+    "classesToComplete" : {
+      "type":"array",
+      "items":{"type":"string"}
+    },
+    "classesCompleted" : {
+      "type":"array",
+      "items":{"type":"string"}
+    },
+    "subrequirements" : {
+      "type": "array",
+      "items": { "$ref": "#" }
+    }
+  }
+}
+ `,
+    model: "zotsiteschat",
     tools: [{ type: "file_search" }],
   });
 
-const fileStreams = ["tests/test.pdf"].map((path) =>
+const fileStreams = {
+  files: ["tests/test.pdf"].map((path) =>
 fs.createReadStream(path),
-);
+)};
+
+const file  = await client.files.create({
+  file: fs.createReadStream('tests/test.pdf'),
+  purpose: "assistants",
+});
+
+
+console.log(file);
 
 // Create a vector store including our two files.
 let vectorStore = await client.beta.vectorStores.create({
 name: "Transcripts",
 });
 
-await client.beta.vectorStores.fileBatches.uploadAndPoll(vectorStore.id, fileStreams);
+await client.beta.vectorStores.fileBatches.createAndPoll(vectorStore.id, {file_ids: [file.id]});
 
 await client.beta.assistants.update(assistant.id, {tool_resources: {file_search: {vector_store_ids  : [vectorStore.id]}}});
 
@@ -41,15 +68,15 @@ const aapl10k = await client.files.create({
   });
   
 const thread = await client.beta.threads.create({
-messages: [
-    {
-    role: "user",
-    content:
-        "analyse 'test.pdf' and return the correct student json only containing requirements from the sections called general requirements or the ones that start with 'Major'.",
-    // Attach the new file to the message.
-    attachments: [{ file_id: aapl10k.id, tools: [{ type: "file_search" }] }],
-    },
-],
+    messages: [
+        {
+        role: "user",
+        content:
+            "analyse 'test.pdf' and return the correct student json only containing requirements from the sections called general requirements or the ones that start with 'Major'.",
+        // Attach the new file to the message.
+        attachments: [{ file_id: aapl10k.id, tools: [{ type: "file_search" }] }],
+        },
+    ],
 });
 
 // The thread now has a vector store in its tool resources.
