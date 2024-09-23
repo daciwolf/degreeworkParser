@@ -1,7 +1,7 @@
 import { AzureOpenAI } from "openai";
 import fs from 'fs';
 
-console.log("RUNNING...")
+console.log("RUNNING...");
 
 
 const endpoint = process.env.AZURE_ENDPOINT;
@@ -9,7 +9,7 @@ const apiKey = process.env.AZURE_API_KEY;
 const apiVersion = "2024-05-01-preview";
 
 
-console.log("Loaded Enviornment Variables")
+console.log("Loaded Enviornment Variables");
 const client = new AzureOpenAI({endpoint: endpoint, apiKey : apiKey, apiVersion: apiVersion})
 
 
@@ -22,7 +22,7 @@ const assistant = await client.beta.assistants.create({
     tools: [{ type: "file_search" }],
   });
 
-console.log("Connected to Azure Client")
+console.log("Connected to Azure Client");
 
 
 const fileStreams = {
@@ -48,13 +48,16 @@ await client.beta.assistants.update(assistant.id, {tool_resources: {file_search:
 
 
 
-console.log("Created Vector store")
+console.log("Created Vector store");
 
 // A user wants to attach a file to a specific message, let's upload it.
 const aapl10k = await client.files.create({
     file: fs.createReadStream("test.pdf"),
     purpose: "assistants",
   });
+
+
+console.log("attatched the file to vector store");
   
 const thread = await client.beta.threads.create({
     messages: [
@@ -79,6 +82,7 @@ run_id: run.id,
 });
 
 const message = messages.data.pop();
+console.log(message);
 if (message.content[0].type === "text") {
 const { text } = message.content[0];
 const { annotations } = text;
