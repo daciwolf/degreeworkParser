@@ -1,7 +1,7 @@
 import { AzureOpenAI } from "openai";
 import fs from 'fs';
-import { text } from "stream/consumers";
 
+console.log("RUNNING...")
 
 
 const endpoint = process.env.AZURE_ENDPOINT;
@@ -9,7 +9,7 @@ const apiKey = process.env.AZURE_API_KEY;
 const apiVersion = "2024-05-01-preview";
 
 
-
+console.log("Loaded Enviornment Variables")
 const client = new AzureOpenAI({endpoint: endpoint, apiKey : apiKey, apiVersion: apiVersion})
 
 
@@ -22,13 +22,16 @@ const assistant = await client.beta.assistants.create({
     tools: [{ type: "file_search" }],
   });
 
+console.log("Connected to Azure Client")
+
+
 const fileStreams = {
-  files: ["tests/test.pdf"].map((path) =>
+  files: ["test.pdf"].map((path) =>
 fs.createReadStream(path),
 )};
 
 const file  = await client.files.create({
-  file: fs.createReadStream('tests/test.pdf'),
+  file: fs.createReadStream('test.pdf'),
   purpose: "assistants",
 });
 
@@ -43,9 +46,13 @@ await client.beta.vectorStores.fileBatches.createAndPoll(vectorStore.id, {file_i
 await client.beta.assistants.update(assistant.id, {tool_resources: {file_search: {vector_store_ids  : [vectorStore.id]}}});
 
 
+
+
+console.log("Created Vector store")
+
 // A user wants to attach a file to a specific message, let's upload it.
 const aapl10k = await client.files.create({
-    file: fs.createReadStream("tests/test.pdf"),
+    file: fs.createReadStream("test.pdf"),
     purpose: "assistants",
   });
   
