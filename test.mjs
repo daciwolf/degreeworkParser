@@ -144,6 +144,12 @@ const jsonOutput = jsonComplete.choices[0].message.content;
 
 console.log(jsonOutput)
 
+fs.writeFileSync("test.json", jsonOutput);
+
+
+
+
+
 
 
 
